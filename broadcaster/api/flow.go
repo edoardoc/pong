@@ -301,10 +301,10 @@ func (c *Circle) Brightness(x, y float64) uint8 {
 	}
 }
 
-func image_stream() []byte {
+// from http://tech.nitoyon.com/en/blog/2015/12/31/go-image-gen/
+func image_stream(r float64) []byte {
 	var w, h int = 280, 240
 	var hw, hh float64 = float64(w / 2), float64(h / 2)
-	r := 40.0
 	θ := 2 * math.Pi / 3
 	cr := &Circle{hw - r*math.Sin(0), hh - r*math.Cos(0), 60}
 	cg := &Circle{hw - r*math.Sin(θ), hh - r*math.Cos(θ), 60}
@@ -323,83 +323,46 @@ func image_stream() []byte {
 		}
 	}
 
-	// var byteWriter = bufio.NewWriter(send_S3)
-
 	buf := new(bytes.Buffer)
 	png.Encode(buf, m)
-	// f, err := os.OpenFile("rgb.png", os.O_WRONLY|os.O_CREATE, 0600)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// defer f.Close()
-	// png.Encode(f, m)
 	return buf.Bytes()
 }
 
+// info about scaling... https://medium.com/free-code-camp/million-websockets-and-go-cc58418460bb
 func main() {
-	fmt.Println("starting echo...")
-
 	http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("setting up...")
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
-			fmt.Println("upgrading ws ", err)
-
+			fmt.Println("error upgrading ws ", err)
 		}
 		fmt.Println("ws upgraded")
+		// TODO: different connections should launch different routines
 		go func() {
 			defer conn.Close()
 
-			var (
-				state  = ws.StateServerSide
-				reader = wsutil.NewReader(conn, state)
-				writer = wsutil.NewWriter(conn, state, ws.OpBinary)
-			)
+			var msg []byte
 			for {
-				header, err := reader.NextFrame()
-				if err != nil {
-					// handle error
+				msg, _, _ = wsutil.ReadClientData(conn)
+				if msg != nil {
+					break
 				}
+			}
+			fmt.Println("someone connected, starting transmission...") // needs at least one client to connect to start transmissions
 
-				// Reset writer to write frame with right operation code.
-				writer.Reset(conn, state, header.OpCode)
+			n := 135.0
+			incr := -0.5
+			for {
+				// msg := fmt.Sprintf("currentTimeMillis = %d", time.Now().UnixNano()/int64(time.Millisecond)) // simple stub transmission of local server timestamp
+				// fmt.Println("I AM sending ", msg)
+				// wsutil.WriteServerMessage(conn, op, []byte(msg))
 
-				wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream())
-
-				// if _, err = io.Copy(writer, reader); err != nil {
-				// 	// handle error
-				// }
-				if err = writer.Flush(); err != nil {
-					// handle error
+				wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n))
+				n = n + incr
+				if n > 135 || n < 20 {
+					incr = -incr
 				}
 			}
 		}()
 	}))
-
-	// http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	conn, _, _, _ := ws.UpgradeHTTP(r, w)
-
-	// 	go func() {
-	// 		defer conn.Close()
-
-	// 		var msg []byte
-	// 		var op ws.OpCode
-	// 		for {
-	// 			msg, op, _ = wsutil.ReadClientData(conn)
-	// 			if msg != nil {
-	// 				break
-	// 			}
-	// 		}
-
-	// 		fmt.Println("someone connected, starting transmission...") // needs at least one client to connect to start transmissions
-	// 		for {
-	// 			// msg := fmt.Sprintf("currentTimeMillis = %d", time.Now().UnixNano()/int64(time.Millisecond)) // simple stub transmission of local server timestamp
-	// 			// fmt.Println("I AM sending ", msg)
-	// 			// wsutil.WriteServerMessage(conn, op, []byte(msg))
-
-	// 			wsutil.WriteServerMessage(conn, op, image_stream())
-	// 		}
-	// 	}()
-	// }))
 }
