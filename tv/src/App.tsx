@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
-import logo from './logo.svg';
+import tvimage from './snow.gif';
 
 var client = new WebSocket('ws://127.0.0.1:8080');
 client.binaryType = 'arraybuffer';
@@ -13,14 +13,17 @@ class App extends Component {
 	componentWillMount() {
 		client.onopen = () => {
 			console.log('WebSocket Client Connected');
-			// // this.setState({ roll: 'test channel' });
 			client.send('ciao') // sending any msg to start the server
-			
 		};
+        client.onclose = () => {
+            console.log("Closed...");
+			// TODO: put back the snow
+        }
 		
 		// https://stackoverflow.com/questions/39999367/how-do-i-reference-a-local-image-in-react
 		// https://stackoverflow.com/a/64635519/436085
 		client.onmessage = (msg) => {
+			// console.dir(msg)
 			var myImg = document.getElementById('myImg') as HTMLImageElement;
 			var arrayBuffer = msg.data;
 			var content = new Uint8Array(arrayBuffer);
@@ -28,7 +31,6 @@ class App extends Component {
 			if (myImg) {
 				myImg.src = URL.createObjectURL( new Blob([content.buffer], { type: 'image/png' } /* (1) */)  );
 			}
-			
 		};
 	}
 
@@ -38,7 +40,7 @@ class App extends Component {
 			<div className="App">
 			<header className="App-header">
 			
-			<img src={logo} id="myImg" alt="myImg" />
+			<img src={tvimage} id="myImg" alt="myImg" />
 			
 			<p>
 				Edit <code>src/App.tsx</code> and save to reload.
