@@ -9,11 +9,17 @@ class App extends Component {
 	state = {
 		roll: "snow"
 	  };
-	
+	  componentDidMount() {
+	  }
+		
 	componentWillMount() {
+		setInterval(() => {
+			client.send('ciao') // sending any msg to start the server
+			console.log("pinging server...")
+		}, 1000);
+  
 		client.onopen = () => {
 			console.log('WebSocket Client Connected');
-			client.send('ciao') // sending any msg to start the server
 		};
         client.onclose = () => {
             console.log("Closed...");

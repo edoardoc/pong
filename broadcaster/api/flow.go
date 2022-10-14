@@ -337,7 +337,8 @@ func main() {
 			fmt.Println("error upgrading ws ", err)
 		}
 		fmt.Println("ws upgraded")
-		// TODO: different connections should launch different routines
+
+		// simple keepalive until its pinged every 1000ms
 		go func() {
 			defer conn.Close()
 
@@ -345,10 +346,14 @@ func main() {
 			for {
 				msg, _, _ = wsutil.ReadClientData(conn)
 				if msg != nil {
-					break
+					fmt.Println("ping received")
 				}
 			}
-			fmt.Println("someone connected, starting transmission...") // needs at least one client to connect to start transmissions
+		}()
+
+		// always on transmission on this channel
+		go func() {
+			//			fmt.Println("someone connected, starting transmission...") // needs at least one client to connect to start transmissions
 
 			n := 135.0
 			incr := -0.5
