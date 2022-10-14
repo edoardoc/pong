@@ -207,7 +207,7 @@ func Users(w http.ResponseWriter, r *http.Request) {
 				formattedOut, err := json.MarshalIndent(listUser, "", "    ")
 				// formattati, err := json.Marshal(listUser)
 				if err != nil {
-					fmt.Println(err)
+					log.Printf(err)
 					return
 				}
 				w.Write(formattedOut)
@@ -249,14 +249,14 @@ func main() {
 
 	if len(os.Args) >= 2 {
 		if os.Args[1] == "createDb" {
-			fmt.Println("creating database...")
+			log.Printf("creating database...")
 			// ** DB CREATION
 			err := createSchema(db)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if os.Args[1] == "dropDb" {
-			fmt.Println("N/D")
+			log.Printf("N/D")
 		} else {
 			fmt.Printf("unrecognised parameter: %v", os.Args[1])
 		}
@@ -275,14 +275,25 @@ func main() {
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+
+	// "go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+
+	// "go.mongodb.org/mongo-driver/mongo/readpref"
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math"
 	"net/http"
+	"time"
 )
 
 type Circle struct {
@@ -302,13 +313,13 @@ func (c *Circle) Brightness(x, y float64) uint8 {
 }
 
 // from http://tech.nitoyon.com/en/blog/2015/12/31/go-image-gen/
-func image_stream(r float64) []byte {
+func image_stream(r float64, size_red float64, size_green float64, size_blue float64) []byte {
 	var w, h int = 280, 240
 	var hw, hh float64 = float64(w / 2), float64(h / 2)
 	θ := 2 * math.Pi / 3
-	cr := &Circle{hw - r*math.Sin(0), hh - r*math.Cos(0), 60}
-	cg := &Circle{hw - r*math.Sin(θ), hh - r*math.Cos(θ), 60}
-	cb := &Circle{hw - r*math.Sin(-θ), hh - r*math.Cos(-θ), 60}
+	cr := &Circle{hw - r*math.Sin(0), hh - r*math.Cos(0), size_red}
+	cg := &Circle{hw - r*math.Sin(θ), hh - r*math.Cos(θ), size_green}
+	cb := &Circle{hw - r*math.Sin(-θ), hh - r*math.Cos(-θ), size_blue}
 
 	m := image.NewRGBA(image.Rect(0, 0, w, h))
 	for x := 0; x < w; x++ {
@@ -328,15 +339,135 @@ func image_stream(r float64) []byte {
 	return buf.Bytes()
 }
 
+// // curl -v --header "Content-Type: application/json" --request PUT --data '{"firstname":"wwwEdoardo","lastname":"Ceccadddrelli"}' http://localhost:8080/api/users
+// func Users(w http.ResponseWriter, r *http.Request) {
+// 	switch r.Method {
+// 	case http.MethodPut:
+// 		log.Printf("serving Put /Users ")
+// 		receivedToken := r.Header.Get("x-auth-token")
+// 		log.Printf("receivedToken : %v\n", receivedToken)
+// 		whichUser, err := decodeToken(receivedToken) // ** DECODING TOKEN
+// 		if err != nil {
+// 			w.WriteHeader(http.StatusUnauthorized)
+// 		} else {
+// 			oneUser, err := receivedUser(r)
+// 			oneUser.Email = whichUser // to make sure the seek happens on the token value
+// 			if err != nil {
+// 				w.WriteHeader(http.StatusBadRequest)
+// 			} else {
+// 				err = updateApiUser(oneUser)
+// 				if err != nil {
+// 					w.WriteHeader(http.StatusInternalServerError)
+// 				} else {
+// 					w.WriteHeader(http.StatusOK)
+// 				}
+// 			}
+// 		}
+// 	default:
+// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+// 	}
+// }
+
 // info about scaling... https://medium.com/free-code-camp/million-websockets-and-go-cc58418460bb
 func main() {
+	log.Printf("setting up...")
+
+	// DB CODE STARTS HERE
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://jamgg:jam@localhost:27017/?authSource=admin"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Disconnect(ctx)
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Print("connected to db")
+
+	networkdata := client.Database("network")
+
+	channelsCollection := networkdata.Collection("channels")
+	channelsResult, err := channelsCollection.InsertMany(ctx, []interface{}{
+		bson.D{
+			{
+				Key:   "showrgb",
+				Value: bson.A{80, 20, 60},
+			},
+			{Key: "description", Value: "Huge red, small green and a normal sized blue"},
+		},
+		bson.D{
+			{
+				Key:   "showrgb",
+				Value: bson.A{20, 80, 60},
+			},
+			{Key: "description", Value: "Huge green, small red and a normal sized blue"},
+		},
+		bson.D{
+			{
+				Key:   "showrgb",
+				Value: bson.A{20, 200, 60},
+			},
+			{Key: "description", Value: "ALL green, small red and a normal sized blue"},
+		},
+		bson.D{
+			{
+				Key:   "showrgb",
+				Value: bson.A{20, 80, 300},
+			},
+			{Key: "description", Value: "ALL Blue, huge green, small red"},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cursorChannels := channelsCollection.FindOne(ctx, bson.M{"_id": 0})
+	if err != nil {
+		log.Fatal(err)
+	}
+	// defer cursorChannels.Close(ctx)
+
+	fmt.Println("CHANNEL 1:", cursorChannels)
+
+	// selectedChannelCollection := networkdata.Collection("selectedChannel")
+	// selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
+	// 	{Key: "channel", Value: cursorChannels.ID()},
+	// })
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("selectedChannelResult: ", selectedChannelResult)
+
+	// Now I open
+
+	// for cursor.Next(ctx) {
+	// 	fmt.Println("cursor:", cursor.Current)
+	// 	var channel bson.M
+	// 	if err = cursor.Decode(&channel); err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	//		fmt.Println("CANALE:", channel["_id"])
+	// }
+
+	fmt.Printf("%v ready for transmission!\n", len(channelsResult.InsertedIDs))
+	// DB CODE ENDS HERE
+
+	// http.HandleFunc("/api/users", Users)
+	// http.ListenAndServe(":8080", nil)
+
 	http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("setting up...")
+
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
-			fmt.Println("error upgrading ws ", err)
+			log.Printf("error upgrading ws ", err)
 		}
-		fmt.Println("ws upgraded (AKA new tv box connected)")
+		log.Printf("ws upgraded (AKA new tv box connected)")
 
 		// always on transmission on this channel
 		go func() {
@@ -344,9 +475,9 @@ func main() {
 			n := 135.0
 			incr := -0.5
 			for {
-				err = wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n))
+				err = wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n, 80, 20, 600))
 				if err != nil {
-					fmt.Println("tv shut down, stop this feed ", err)
+					log.Printf("tv shut down, stop this feed ", err)
 					break
 				}
 				n = n + incr
@@ -354,7 +485,7 @@ func main() {
 					incr = -incr
 				}
 			}
-			fmt.Println("ADIOS")
+			log.Printf("ADIOS")
 		}()
 	}))
 }
