@@ -336,38 +336,25 @@ func main() {
 		if err != nil {
 			fmt.Println("error upgrading ws ", err)
 		}
-		fmt.Println("ws upgraded")
-
-		// simple keepalive until its pinged every 1000ms
-		go func() {
-			defer conn.Close()
-
-			var msg []byte
-			for {
-				msg, _, _ = wsutil.ReadClientData(conn)
-				if msg != nil {
-					fmt.Println("ping received")
-				}
-			}
-		}()
+		fmt.Println("ws upgraded (AKA new tv box connected)")
 
 		// always on transmission on this channel
 		go func() {
-			//			fmt.Println("someone connected, starting transmission...") // needs at least one client to connect to start transmissions
-
+			defer conn.Close()
 			n := 135.0
 			incr := -0.5
 			for {
-				// msg := fmt.Sprintf("currentTimeMillis = %d", time.Now().UnixNano()/int64(time.Millisecond)) // simple stub transmission of local server timestamp
-				// fmt.Println("I AM sending ", msg)
-				// wsutil.WriteServerMessage(conn, op, []byte(msg))
-
-				wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n))
+				err = wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n))
+				if err != nil {
+					fmt.Println("tv shut down, stop this feed ", err)
+					break
+				}
 				n = n + incr
 				if n > 135 || n < 20 {
 					incr = -incr
 				}
 			}
+			fmt.Println("ADIOS")
 		}()
 	}))
 }
