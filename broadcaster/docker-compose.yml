@@ -18,6 +18,8 @@ services:
       mongostorage:
         condition: service_healthy
 
+  # https://github.com/docker-library/mongo/issues/339#issuecomment-1166441526
+  # mongo with replica set
   mongostorage:
     hostname: mongo1
     image: mongo:latest

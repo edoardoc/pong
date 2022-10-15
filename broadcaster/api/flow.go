@@ -35,25 +35,6 @@ type ApiUserClaims struct {
 	Apiuser
 }
 
-// createSchema creates database schema for User and Story models.
-func createSchema(db *bun.DB) error {
-	ctx := context.Background()
-
-	models := []interface{}{
-		(*Apiuser)(nil),
-	}
-
-	for _, model := range models {
-		log.Printf("creating table %v ", reflect.TypeOf(model))
-
-		_, err := db.NewCreateTable().Model(model).Exec(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	return nil
-}
-
 func createToken(email string) (time.Time, string, error) {
 	expirationTime := time.Now().Add(30 * time.Minute)
 	t := jwt.New(jwt.SigningMethodHS256)
@@ -247,21 +228,6 @@ func main() {
 	db = bun.NewDB(sqldb, pgdialect.New())
 	defer db.Close()
 
-	if len(os.Args) >= 2 {
-		if os.Args[1] == "createDb" {
-			log.Printf("creating database...")
-			// ** DB CREATION
-			err := createSchema(db)
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else if os.Args[1] == "dropDb" {
-			log.Printf("N/D")
-		} else {
-			fmt.Printf("unrecognised parameter: %v", os.Args[1])
-		}
-		return
-	}
 
 	log.Printf("starting api ")
 	http.HandleFunc("/api/signup", Signup)
@@ -274,70 +240,21 @@ func main() {
 */
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"os"
 
-	// "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 
-	// "go.mongodb.org/mongo-driver/mongo/readpref"
-	"image"
-	"image/color"
-	"image/png"
 	"log"
-	"math"
 	"net/http"
 	"time"
 )
-
-type Circle struct {
-	X, Y, R float64
-}
-
-func (c *Circle) Brightness(x, y float64) uint8 {
-	var dx, dy float64 = c.X - x, c.Y - y
-	d := math.Sqrt(dx*dx+dy*dy) / c.R
-	if d > 1 {
-		// outside
-		return 0
-	} else {
-		// inside
-		return uint8((1 - math.Pow(d, 5)) * 255)
-	}
-}
-
-// from http://tech.nitoyon.com/en/blog/2015/12/31/go-image-gen/
-func image_stream(r float64, size_red float64, size_green float64, size_blue float64) []byte {
-	var w, h int = 280, 240
-	var hw, hh float64 = float64(w / 2), float64(h / 2)
-	θ := 2 * math.Pi / 3
-	cr := &Circle{hw - r*math.Sin(0), hh - r*math.Cos(0), size_red}
-	cg := &Circle{hw - r*math.Sin(θ), hh - r*math.Cos(θ), size_green}
-	cb := &Circle{hw - r*math.Sin(-θ), hh - r*math.Cos(-θ), size_blue}
-
-	m := image.NewRGBA(image.Rect(0, 0, w, h))
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
-			c := color.RGBA{
-				cr.Brightness(float64(x), float64(y)),
-				cg.Brightness(float64(x), float64(y)),
-				cb.Brightness(float64(x), float64(y)),
-				255,
-			}
-			m.Set(x, y, c)
-		}
-	}
-
-	buf := new(bytes.Buffer)
-	png.Encode(buf, m)
-	return buf.Bytes()
-}
 
 // // curl -v --header "Content-Type: application/json" --request PUT --data '{"firstname":"wwwEdoardo","lastname":"Ceccadddrelli"}' http://localhost:8080/api/users
 // func Users(w http.ResponseWriter, r *http.Request) {
@@ -368,17 +285,11 @@ func image_stream(r float64, size_red float64, size_green float64, size_blue flo
 // 	}
 // }
 
-// info about scaling... https://medium.com/free-code-camp/million-websockets-and-go-cc58418460bb
-func main() {
-	log.Printf("setting up...")
+// createSchema creates database schema for User and Story models.
+func createSchema(client *mongo.Client) error {
 
-	// DB CODE STARTS HERE
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
-	if err != nil {
-		log.Fatal(err)
-	}
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err = client.Connect(ctx)
+	err := client.Connect(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -388,7 +299,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Print("connected to db")
+	log.Print("db is alive")
 
 	networkdata := client.Database("network")
 
@@ -454,6 +365,28 @@ func main() {
 	// 	}
 	// 	//		fmt.Println("CANALE:", channel["_id"])
 	// }
+}
+
+// info about scaling... https://medium.com/free-code-camp/million-websockets-and-go-cc58418460bb
+func main() {
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(os.Args) >= 2 {
+		if os.Args[1] == "createDb" {
+			log.Printf("creating database...")
+			err := createSchema(client)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			fmt.Printf("unrecognised parameter: %v", os.Args[1])
+		}
+		return
+	}
+
+	log.Printf("setting up...")
 
 	fmt.Printf("%v ready for transmission!\n", len(channelsResult.InsertedIDs))
 	// DB CODE ENDS HERE
