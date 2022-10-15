@@ -373,7 +373,7 @@ func main() {
 	log.Printf("setting up...")
 
 	// DB CODE STARTS HERE
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://jamgg:jam@localhost:27017/?authSource=admin"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
 	if err != nil {
 		log.Fatal(err)
 	}
