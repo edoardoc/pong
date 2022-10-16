@@ -77,10 +77,10 @@ func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, s
 }
 
 func main() {
-	log.Printf("setting up...")
+	log.Printf("ANTENNA setting up...")
 
 	// DB CODE STARTS HERE
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS"))
 	if err != nil {
 		log.Fatal(err)
 	}
