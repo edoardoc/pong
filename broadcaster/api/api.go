@@ -127,7 +127,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -223,15 +222,15 @@ func createSchema(client *mongo.Client) error {
 	return err
 }
 
-// this advances the channel by 1 and updates the index
-func moveToChannel(client *mongo.Client, n *int) {
+// this one gets the the nth channel transmission data (3 values)
+func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	networkdata := client.Database("network")
 	channelsCollection := networkdata.Collection("channels")
 	options := new(options.FindOptions)
 
-	options.SetSkip(int64(*n))
+	options.SetSkip(n)
 	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
 	if err != nil {
 		log.Fatal(err)
@@ -242,13 +241,39 @@ func moveToChannel(client *mongo.Client, n *int) {
 	if err := cursor.Decode(&result); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(result["showrgb"])
+	// fmt.Println(result["showrgb"])
 	transmission := result["showrgb"]
 	if pa, ok := transmission.(primitive.A); ok {
 		transmissionMSI := []interface{}(pa)
 		fmt.Println("Working", transmissionMSI)
-		fmt.Println(reflect.TypeOf(transmissionMSI))
+		return transmissionMSI
+		// fmt.Println(reflect.TypeOf(transmissionMSI))
+		// TODO: add new channel record
 	}
+	return nil
+}
+
+// this moves the channel and checking that it is always 0 <= n <= lastCh
+func moveToChannel(lastCh int64, n *int64) {
+	if *n >= lastCh {
+		*n = 0
+	} else if *n <= 0 {
+		*n = lastCh - 1
+	}
+}
+
+func lastChannel(client *mongo.Client) (error, int64) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client.Connect(ctx)
+	client.Ping(ctx, readpref.Primary())
+
+	networkdata := client.Database("network")
+	channelsCollection := networkdata.Collection("channels")
+	totChs, err := channelsCollection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return err, totChs - 1
 }
 
 func main() {
@@ -270,22 +295,46 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
-	i := 1
-	// networkdata := client.Database("network")
-	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	// channelsCollection := networkdata.Collection("channels")
-	// totChs, err := channelsCollection.CountDocuments(ctx, bson.M{})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Print("totChs: ", totChs)
+	var i int64
+	i = 1
+	err, totCh := lastChannel(client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("last channel is %v", totCh)
 
 	i++
-	moveToChannel(client, &i)
+	moveToChannel(totCh, &i)
 	i++
-	moveToChannel(client, &i)
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
+	i--
+	moveToChannel(totCh, &i)
 	i++
-	moveToChannel(client, &i)
+	moveToChannel(totCh, &i)
+	i++
+	moveToChannel(totCh, &i)
+	i++
+	moveToChannel(totCh, &i)
+	i++
+	moveToChannel(totCh, &i)
 	log.Print("we are in channel ", i)
 
 	// SAMPLE CODE TO SHOW ALL CHANNELS
