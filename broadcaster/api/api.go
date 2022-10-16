@@ -220,17 +220,35 @@ func createSchema(client *mongo.Client) error {
 	}
 	fmt.Println("selectedChannelResult: ", selectedChannelResult)
 
-	// Now I open
-
-	// for cursor.Next(ctx) {
-	// 	fmt.Println("cursor:", cursor.Current)
-	// 	var channel bson.M
-	// 	if err = cursor.Decode(&channel); err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	//		fmt.Println("CANALE:", channel["_id"])
-	// }
 	return err
+}
+
+// this advances the channel by 1 and updates the index
+func moveToChannel(client *mongo.Client, n *int) {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client.Connect(ctx)
+	networkdata := client.Database("network")
+	channelsCollection := networkdata.Collection("channels")
+	options := new(options.FindOptions)
+	log.Print("skip: ", int64(*n))
+	options.SetSkip(int64(*n))
+	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(ctx)
+	cursor.TryNext(ctx)
+	var result bson.M
+	if err := cursor.Decode(&result); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result["showrgb"])
+	transmission := result["showrgb"]
+	if pa, ok := transmission.(primitive.A); ok {
+		transmissionMSI := []interface{}(pa)
+		fmt.Println("Working", transmissionMSI)
+		fmt.Println(reflect.TypeOf(transmissionMSI))
+	}
 }
 
 func main() {
@@ -252,11 +270,15 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
+	i := 1
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client.Connect(ctx)
-	defer client.Disconnect(ctx)
-	networkdata := client.Database("network")
+	i++
+	moveToChannel(client, &i)
+	i++
+	moveToChannel(client, &i)
+	i++
+	moveToChannel(client, &i)
+	log.Print("we are in channel ", i)
 
 	// SAMPLE CODE TO SHOW ALL CHANNELS
 	// channelsCollection := networkdata.Collection("channels")
@@ -287,26 +309,26 @@ func main() {
 	// fmt.Println(channel)
 
 	// SAMPLE CODE TO SHOW CHANNEL Nth
-	channelsCollection := networkdata.Collection("channels")
-	options := new(options.FindOptions)
-	options.SetSkip(4)
-	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cursor.Close(ctx)
-	cursor.TryNext(ctx)
-	var result bson.M
-	if err := cursor.Decode(&result); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(result["showrgb"])
-	value := result["showrgb"]
-	if pa, ok := value.(primitive.A); ok {
-		valueMSI := []interface{}(pa)
-		fmt.Println("Working", valueMSI[2])
-		fmt.Println(reflect.TypeOf(valueMSI))
-	}
+	// channelsCollection := networkdata.Collection("channels")
+	// options := new(options.FindOptions)
+	// options.SetSkip(15)
+	// cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer cursor.Close(ctx)
+	// cursor.TryNext(ctx)
+	// var result bson.M
+	// if err := cursor.Decode(&result); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(result["showrgb"])
+	// transmission := result["showrgb"]
+	// if pa, ok := transmission.(primitive.A); ok {
+	// 	transmissionMSI := []interface{}(pa)
+	// 	fmt.Println("Working", transmissionMSI)
+	// 	fmt.Println(reflect.TypeOf(transmissionMSI))
+	// }
 
 	// transmission := []interface{}(result["showrgb"])
 	// fmt.Printf("%T", transmission)
