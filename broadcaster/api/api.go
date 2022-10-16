@@ -127,8 +127,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -171,14 +173,14 @@ import (
 func createSchema(client *mongo.Client) error {
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err := client.Connect(ctx)
+	client.Connect(ctx)
 	defer client.Disconnect(ctx)
-	err = client.Ping(ctx, readpref.Primary())
+	client.Ping(ctx, readpref.Primary())
 	log.Print("db is alive")
 
 	networkdata := client.Database("network")
 	channelsCollection := networkdata.Collection("channels")
-	ccc, err := channelsCollection.InsertMany(ctx, []interface{}{
+	_, err := channelsCollection.InsertMany(ctx, []interface{}{
 		bson.D{
 			{
 				Key:   "showrgb",
@@ -208,16 +210,6 @@ func createSchema(client *mongo.Client) error {
 			{Key: "description", Value: "ALL Blue, huge green, small red"},
 		},
 	})
-	fmt.Println("CHANNELS JUST SAVED: ", ccc)
-	// cursorChannels := channelsCollection.FindOne(ctx, bson.M{"_id": 0})
-	// if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	defer cursorChannels.Close(ctx)
-
-	// 	fmt.Println("TOTAL: ", cursorChannels.count())
-
-	// fmt.Println("CHANNEL 1:", cursorChannels)
 
 	// selectedChannelCollection := networkdata.Collection("selectedChannel")
 	// selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
@@ -242,7 +234,7 @@ func createSchema(client *mongo.Client) error {
 }
 
 func main() {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS&directConnection=true"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS&directConnection=true"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -260,6 +252,67 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client.Connect(ctx)
+	defer client.Disconnect(ctx)
+	networkdata := client.Database("network")
+
+	// SAMPLE CODE TO SHOW ALL CHANNELS
+	// channelsCollection := networkdata.Collection("channels")
+	// cursor, err := channelsCollection.Find(ctx, bson.M{})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// var channels []bson.M
+	// if err = cursor.All(ctx, &channels); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(channels)
+
+	// SAMPLE CODE TO SHOW CHANNEL with ID:...
+	// objectId, err := primitive.ObjectIDFromHex("634bfe67eb5543ddd0dcc82b")
+	// if err != nil {
+	// 	log.Println("Invalid id")
+	// }
+	// channelsCollection := networkdata.Collection("channels")
+	// cursorChannels := channelsCollection.FindOne(ctx, bson.M{"_id": objectId})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// var channel bson.M
+	// if err = cursorChannels.Decode(&channel); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(channel)
+
+	// SAMPLE CODE TO SHOW CHANNEL Nth
+	channelsCollection := networkdata.Collection("channels")
+	options := new(options.FindOptions)
+	options.SetSkip(4)
+	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(ctx)
+	cursor.TryNext(ctx)
+	var result bson.M
+	if err := cursor.Decode(&result); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(result["showrgb"])
+	value := result["showrgb"]
+	if pa, ok := value.(primitive.A); ok {
+		valueMSI := []interface{}(pa)
+		fmt.Println("Working", valueMSI[2])
+		fmt.Println(reflect.TypeOf(valueMSI))
+	}
+
+	// transmission := []interface{}(result["showrgb"])
+	// fmt.Printf("%T", transmission)
+
+	// fmt.Println("CHANNEL 1:", cursorChannels)
+
 	// http.HandleFunc("/api/signup", Signup)
 	// http.HandleFunc("/api/login", Login)
 	// http.HandleFunc("/api/users", Users)
