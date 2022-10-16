@@ -222,6 +222,22 @@ func createSchema(client *mongo.Client) error {
 	return err
 }
 
+func changeTo(client *mongo.Client, n int64) error {
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client.Connect(ctx)
+	networkdata := client.Database("network")
+
+	selectedChannelCollection := networkdata.Collection("selectedChannel")
+	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.M{"channel": n})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("selectedChannelResult: ", selectedChannelResult)
+
+	return err
+}
+
 // this one gets the the nth channel transmission data (3 values)
 func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -307,26 +323,6 @@ func main() {
 	moveToChannel(totCh, &i)
 	i++
 	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
-	i--
-	moveToChannel(totCh, &i)
 	i++
 	moveToChannel(totCh, &i)
 	i++
@@ -337,6 +333,7 @@ func main() {
 	moveToChannel(totCh, &i)
 	log.Print("we are in channel ", i)
 
+	changeTo(client, i)
 	// SAMPLE CODE TO SHOW ALL CHANNELS
 	// channelsCollection := networkdata.Collection("channels")
 	// cursor, err := channelsCollection.Find(ctx, bson.M{})

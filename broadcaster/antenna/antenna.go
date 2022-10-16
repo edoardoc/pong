@@ -72,7 +72,25 @@ func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, s
 		if err := stream.Decode(&data); err != nil {
 			panic(err)
 		}
-		fmt.Printf("new data just got in: %v\n", data)
+		fd := data["fullDocument"]
+		fmt.Println(fd)
+		fmt.Printf("type is %T", fd)
+
+		username, ok := fd["username"].(string)
+
+		for k, v := range data.(primitive.M)["fullDocument"] {
+			if str, ok := v.(string); ok {
+				fmt.Println(str)
+				// Use k and str
+			}
+		}
+
+		// fmt.Println(ok)
+		// fmt.Println(md)
+
+		// newChannel := data["channel"]
+		// log.Printf("starting trasmission of channel %v\n", newChannel)
+
 	}
 }
 
