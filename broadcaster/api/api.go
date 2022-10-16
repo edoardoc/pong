@@ -230,7 +230,7 @@ func moveToChannel(client *mongo.Client, n *int) {
 	networkdata := client.Database("network")
 	channelsCollection := networkdata.Collection("channels")
 	options := new(options.FindOptions)
-	log.Print("skip: ", int64(*n))
+
 	options.SetSkip(int64(*n))
 	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
 	if err != nil {
@@ -271,6 +271,14 @@ func main() {
 
 	log.Printf("starting channels api ")
 	i := 1
+	// networkdata := client.Database("network")
+	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	// channelsCollection := networkdata.Collection("channels")
+	// totChs, err := channelsCollection.CountDocuments(ctx, bson.M{})
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Print("totChs: ", totChs)
 
 	i++
 	moveToChannel(client, &i)
