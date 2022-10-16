@@ -72,15 +72,13 @@ func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, s
 		if err := stream.Decode(&data); err != nil {
 			panic(err)
 		}
-		fmt.Printf("%v\n", data)
+		fmt.Printf("new data just got in: %v\n", data)
 	}
 }
 
 func main() {
-	log.Printf("ANTENNA setting up...")
-
-	// DB CODE STARTS HERE
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS"))
+	log.Print("Database setting up ...")
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,6 +94,8 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Print("connected to db and pinged")
+
+	// watching for channel changes...
 	networkdata := client.Database("network")
 	selectedChannelCollection := networkdata.Collection("selectedChannel")
 	var waitGroup sync.WaitGroup
@@ -107,8 +107,7 @@ func main() {
 	routineCtx, _ := context.WithCancel(context.Background())
 	go iterateChangeStream(routineCtx, waitGroup, episodesStream)
 
-	waitGroup.Wait()
-
+	log.Printf("ANTENNA setting up...")
 	http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
@@ -136,4 +135,7 @@ func main() {
 			log.Print("ADIOS")
 		}()
 	}))
+
+	waitGroup.Wait()
+
 }

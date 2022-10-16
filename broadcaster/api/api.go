@@ -211,14 +211,14 @@ func createSchema(client *mongo.Client) error {
 		},
 	})
 
-	// selectedChannelCollection := networkdata.Collection("selectedChannel")
-	// selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
-	// 	{Key: "channel", Value: cursorChannels.ID()},
-	// })
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println("selectedChannelResult: ", selectedChannelResult)
+	selectedChannelCollection := networkdata.Collection("selectedChannel")
+	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
+		{Key: "channel", Value: 1},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("selectedChannelResult: ", selectedChannelResult)
 
 	// Now I open
 
