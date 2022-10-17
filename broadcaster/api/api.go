@@ -1,128 +1,5 @@
 package main
 
-/*
-
-// curl -v --header "Content-Type: application/json" --request POST --data '{"email":"ridleys@gmail.com","password":"233223edfsdf","firstname":"Edoardo","lastname":"Ceccarelli"}' http://localhost:8080/api/signup
-func Signup(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		log.Printf("serving /Signup ")
-
-		oneUser, err := receivedUser(r)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			// a valid user was received (fair assumption, more checks are needed)
-
-			// ** TOKEN GENERATION
-			_, tokenString, err := createToken(oneUser.Email)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-			} else {
-				err = saveApiUser(oneUser)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-				} else {
-					w.Header().Set("x-auth-token", tokenString)
-					w.WriteHeader(http.StatusOK)
-				}
-			}
-		}
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// curl -v --header "Content-Type: application/json" --request POST --data '{"email":"ridleys@gmail.com","password":"test123"}' http://localhost:8080/api/login
-func Login(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		log.Printf("serving /Login ")
-
-		oneUser, err := receivedUser(r)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			credentialsOk, err := checkLoginApiUser(oneUser)
-			if credentialsOk && err == nil {
-				// ** TOKEN GENERATION
-				_, tokenString, err := createToken(oneUser.Email)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-				} else {
-					w.Header().Set("x-auth-token", tokenString)
-					w.WriteHeader(http.StatusOK)
-				}
-			} else {
-				w.WriteHeader(http.StatusUnauthorized)
-			}
-		}
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// curl -v --header "X-Auth-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDYwNjU2NDgsIkVtYWlsIjoicmlkbGV5c0BnbWFpbC5jb20iLCJQYXNzd29yZCI6IiIsIkZpcnN0bmFtZSI6IiIsIkxhc3RuYW1lIjoiIn0.wbJl8b1xjsTavzk8g4mumDOt3NROHXv8Z-AoCBG1tvM" --header "Content-Type: application/json" --request PUT --data '{"firstname":"wwwEdoardo","lastname":"Ceccadddrelli"}' http://localhost:8080/api/users
-// curl -v --header "X-Auth-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NDYwNjU2NDgsIkVtYWlsIjoicmlkbGV5c0BnbWFpbC5jb20iLCJQYXNzd29yZCI6IiIsIkZpcnN0bmFtZSI6IiIsIkxhc3RuYW1lIjoiIn0.wbJl8b1xjsTavzk8g4mumDOt3NROHXv8Z-AoCBG1tvM" --header "Content-Type: application/json" --request GET http://localhost:8080/api/users
-func Users(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		log.Printf("serving Get /Users ")
-		receivedToken := r.Header.Get("x-auth-token")
-		_, err := decodeToken(receivedToken) // ** a valid token means ok to give the list
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-		} else {
-			// ** Apiuser LIST USERS
-			ctx := context.Background()
-			var listUser []*Apiuser
-			err = db.NewSelect().
-				Model((*Apiuser)(nil)).
-				ColumnExpr("email").
-				ColumnExpr("firstname").
-				ColumnExpr("lastname").
-				Scan(ctx, &listUser)
-
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-			} else {
-				formattedOut, err := json.MarshalIndent(listUser, "", "    ")
-				// formattati, err := json.Marshal(listUser)
-				if err != nil {
-					log.Printf(err)
-					return
-				}
-				w.Write(formattedOut)
-				w.WriteHeader(http.StatusOK)
-			}
-		}
-	case http.MethodPut:
-		log.Printf("serving Put /Users ")
-		receivedToken := r.Header.Get("x-auth-token")
-		log.Printf("receivedToken : %v\n", receivedToken)
-		whichUser, err := decodeToken(receivedToken) // ** DECODING TOKEN
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-		} else {
-			oneUser, err := receivedUser(r)
-			oneUser.Email = whichUser // to make sure the seek happens on the token value
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-			} else {
-				err = updateApiUser(oneUser)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-				} else {
-					w.WriteHeader(http.StatusOK)
-				}
-			}
-		}
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-*/
-
 import (
 	"context"
 	"fmt"
@@ -138,35 +15,6 @@ import (
 	"net/http"
 	"time"
 )
-
-// // curl -v --header "Content-Type: application/json" --request PUT --data '{"firstname":"wwwEdoardo","lastname":"Ceccadddrelli"}' http://localhost:8080/api/users
-// func Users(w http.ResponseWriter, r *http.Request) {
-// 	switch r.Method {
-// 	case http.MethodPut:
-// 		log.Printf("serving Put /Users ")
-// 		receivedToken := r.Header.Get("x-auth-token")
-// 		log.Printf("receivedToken : %v\n", receivedToken)
-// 		whichUser, err := decodeToken(receivedToken) // ** DECODING TOKEN
-// 		if err != nil {
-// 			w.WriteHeader(http.StatusUnauthorized)
-// 		} else {
-// 			oneUser, err := receivedUser(r)
-// 			oneUser.Email = whichUser // to make sure the seek happens on the token value
-// 			if err != nil {
-// 				w.WriteHeader(http.StatusBadRequest)
-// 			} else {
-// 				err = updateApiUser(oneUser)
-// 				if err != nil {
-// 					w.WriteHeader(http.StatusInternalServerError)
-// 				} else {
-// 					w.WriteHeader(http.StatusOK)
-// 				}
-// 			}
-// 		}
-// 	default:
-// 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-// 	}
-// }
 
 // createSchema creates database schema for User and Story models.
 func createSchema(client *mongo.Client) error {
@@ -209,27 +57,26 @@ func createSchema(client *mongo.Client) error {
 			{Key: "description", Value: "ALL Blue, huge green, small red"},
 		},
 	})
-
-	selectedChannelCollection := networkdata.Collection("selectedChannel")
-	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
-		{Key: "channel", Value: 1},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("selectedChannelResult: ", selectedChannelResult)
+	changeTo(client, 11) // start from channel 11
 
 	return err
 }
 
-func changeTo(client *mongo.Client, n int64) error {
+type Current struct {
+	Channel int `bson:"channel"`
+}
+
+func changeTo(client *mongo.Client, n int) error {
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	networkdata := client.Database("network")
+	post := Current{
+		Channel: n,
+	}
 
 	selectedChannelCollection := networkdata.Collection("selectedChannel")
-	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.M{"channel": n})
+	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, post)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -239,14 +86,14 @@ func changeTo(client *mongo.Client, n int64) error {
 }
 
 // this one gets the the nth channel transmission data (3 values)
-func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
+func transmissionOfChannel(client *mongo.Client, n int) []interface{} {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	networkdata := client.Database("network")
 	channelsCollection := networkdata.Collection("channels")
 	options := new(options.FindOptions)
 
-	options.SetSkip(n)
+	options.SetSkip(int64(n))
 	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
 	if err != nil {
 		log.Fatal(err)
@@ -270,7 +117,7 @@ func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
 }
 
 // this moves the channel and checking that it is always 0 <= n <= lastCh
-func moveToChannel(lastCh int64, n *int64) {
+func moveToChannel(lastCh int, n *int) {
 	if *n >= lastCh {
 		*n = 0
 	} else if *n <= 0 {
@@ -278,7 +125,7 @@ func moveToChannel(lastCh int64, n *int64) {
 	}
 }
 
-func lastChannel(client *mongo.Client) (error, int64) {
+func lastChannel(client *mongo.Client) (error, int) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	client.Ping(ctx, readpref.Primary())
@@ -289,7 +136,7 @@ func lastChannel(client *mongo.Client) (error, int64) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return err, totChs - 1
+	return err, int(totChs - 1)
 }
 
 func main() {
@@ -311,7 +158,7 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
-	var i int64
+	var i int
 	i = 1
 	err, totCh := lastChannel(client)
 	if err != nil {

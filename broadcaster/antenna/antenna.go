@@ -15,7 +15,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -64,18 +64,30 @@ func image_stream(r float64, size_red float64, size_green float64, size_blue flo
 	return buf.Bytes()
 }
 
+type DbEvent struct {
+	DocumentKey   documentKey  `bson:"documentKey"`
+	OperationType string       `bson:"operationType"`
+	FullDocument  fullDocument `bson:"fullDocument"`
+}
+type documentKey struct {
+	ID primitive.ObjectID `bson:"_id"`
+}
+
+type fullDocument struct {
+	ID      primitive.ObjectID `bson:"_id"`
+	Channel int                `bson:"channel"`
+}
+
 func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, stream *mongo.ChangeStream) {
 	defer stream.Close(routineCtx)
 	defer waitGroup.Done()
 	for stream.Next(routineCtx) {
-		var data bson.M
-		if err := stream.Decode(&data); err != nil {
+
+		var dbe DbEvent
+		if err := stream.Decode(&dbe); err != nil {
 			panic(err)
 		}
-		fd := data["fullDocument"]
-		fmt.Println(fd)
-		fmt.Printf("type is %T", fd)
-		// TODO: need to unmarshal this
+		fmt.Printf("Channel: %v\n", dbe.FullDocument.Channel)
 
 	}
 }

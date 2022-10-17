@@ -13,11 +13,6 @@ class App extends Component {
 	  }
 		
 	componentWillMount() {
-		// setInterval(() => {
-		// 	client.send('ciao') // sending any msg to start the server
-		// 	console.log("pinging server...")
-		// }, 1000);
-  
 		client.onopen = () => {
 			console.log('WebSocket Client Connected');
 		};
@@ -48,17 +43,6 @@ class App extends Component {
 			
 			<img src={tvimage} id="myImg" alt="myImg" />
 			
-			<p>
-				Edit <code>src/App.tsx</code> and save to reload.
-			  </p>
-			  <a
-				className="App-link"
-				href="https://reactjs.org"
-				target="_blank"
-				rel="noopener noreferrer"
-			  >
-				Learn React
-			  </a>
 			  {this.state.roll }
 			</header>
 		  </div>
