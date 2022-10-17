@@ -4,11 +4,16 @@ MongoDb is used as a database, in its own docker container
 
 ## Startup
 The project docker definition is in `docker-compose.yml`
-everything should start with a simple
 
-`docker-compose up`
+### first step
+```
+cd broadcaster/
+docker-compose up mongostorage
+```
+this will create the database, together with the `jamRS` that is needed for the streaming capability
 
-which will bring up a database container (that in turns  will create a local `mngdata/` folder for the storage)
+`mngdata/ ` is the mongo db folder 
+
 
 tested with:
 ```
