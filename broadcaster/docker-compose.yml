@@ -1,22 +1,16 @@
 version: '3.9'
 services:
-  emitter:
-    build: emitter
-    container_name: emitter
+  antenna:
+    build: antenna
+    container_name: antenna
     ports:
       - "8080:8080"
-    depends_on:
-      mongostorage:
-        condition: service_healthy
 
   api:
     build: api
     container_name: api
     ports:
       - "8090:8080"
-    depends_on:
-      mongostorage:
-        condition: service_healthy
 
   # https://github.com/docker-library/mongo/issues/339#issuecomment-1166441526
   # mongo with replica set
@@ -26,8 +20,12 @@ services:
     container_name: mongostorage
     environment:
       - AUTH=no # without password
+# PROBLEM with mongo not accepting connections from internal docker network --> https://github.com/prisma/prisma/issues/11925
+      - MONGO_REPLICA_HOST=host.docker.internal
+      - MONGO_REPLICA_PORT=27018
     ports:
       - 27017:27017
+      - 27018:27018
     volumes:
       - ./mngreplica.key:/data/replica.key # openssl rand -base64 756 > mngreplica.key && chmod 400 mngreplica.key
       - ./mongo-init2.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
