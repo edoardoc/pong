@@ -57,27 +57,26 @@ func createSchema(client *mongo.Client) error {
 			{Key: "description", Value: "ALL Blue, huge green, small red"},
 		},
 	})
-
-	selectedChannelCollection := networkdata.Collection("selectedChannel")
-	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.D{
-		{Key: "channel", Value: 1},
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("selectedChannelResult: ", selectedChannelResult)
+	changeTo(client, 11) // start from channel 11
 
 	return err
 }
 
-func changeTo(client *mongo.Client, n int64) error {
+type Current struct {
+	Channel int `bson:"channel"`
+}
+
+func changeTo(client *mongo.Client, n int) error {
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	networkdata := client.Database("network")
+	post := Current{
+		Channel: n,
+	}
 
 	selectedChannelCollection := networkdata.Collection("selectedChannel")
-	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, bson.M{"channel": n})
+	selectedChannelResult, err := selectedChannelCollection.InsertOne(ctx, post)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,14 +86,14 @@ func changeTo(client *mongo.Client, n int64) error {
 }
 
 // this one gets the the nth channel transmission data (3 values)
-func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
+func transmissionOfChannel(client *mongo.Client, n int) []interface{} {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	networkdata := client.Database("network")
 	channelsCollection := networkdata.Collection("channels")
 	options := new(options.FindOptions)
 
-	options.SetSkip(n)
+	options.SetSkip(int64(n))
 	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
 	if err != nil {
 		log.Fatal(err)
@@ -118,7 +117,7 @@ func transmissionOfChannel(client *mongo.Client, n int64) []interface{} {
 }
 
 // this moves the channel and checking that it is always 0 <= n <= lastCh
-func moveToChannel(lastCh int64, n *int64) {
+func moveToChannel(lastCh int, n *int) {
 	if *n >= lastCh {
 		*n = 0
 	} else if *n <= 0 {
@@ -126,7 +125,7 @@ func moveToChannel(lastCh int64, n *int64) {
 	}
 }
 
-func lastChannel(client *mongo.Client) (error, int64) {
+func lastChannel(client *mongo.Client) (error, int) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client.Connect(ctx)
 	client.Ping(ctx, readpref.Primary())
@@ -137,7 +136,7 @@ func lastChannel(client *mongo.Client) (error, int64) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return err, totChs - 1
+	return err, int(totChs - 1)
 }
 
 func main() {
@@ -159,7 +158,7 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
-	var i int64
+	var i int
 	i = 1
 	err, totCh := lastChannel(client)
 	if err != nil {
