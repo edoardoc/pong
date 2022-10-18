@@ -15,6 +15,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -38,10 +39,15 @@ func (c *Circle) Brightness(x, y float64) uint8 {
 }
 
 // from http://tech.nitoyon.com/en/blog/2015/12/31/go-image-gen/
-func image_stream(r float64, size_red float64, size_green float64, size_blue float64) []byte {
+func image_stream(r float64, transmission [3]int) []byte {
 	var w, h int = 280, 240
 	var hw, hh float64 = float64(w / 2), float64(h / 2)
 	θ := 2 * math.Pi / 3
+
+	size_red := float64(transmission[0])
+	size_green := float64(transmission[1])
+	size_blue := float64(transmission[2])
+
 	cr := &Circle{hw - r*math.Sin(0), hh - r*math.Cos(0), size_red}
 	cg := &Circle{hw - r*math.Sin(θ), hh - r*math.Cos(θ), size_green}
 	cb := &Circle{hw - r*math.Sin(-θ), hh - r*math.Cos(-θ), size_blue}
@@ -78,7 +84,37 @@ type fullDocument struct {
 	Channel int                `bson:"channel"`
 }
 
-func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, stream *mongo.ChangeStream) {
+// this one gets the the nth channel transmission data (3 values)
+// TODO: transmissionOfChannel is fragile, upon receiving wrong n it crashes!!!!
+func transmissionOfChannel(client *mongo.Client, n int) []interface{} {
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	client.Connect(ctx)
+	networkdata := client.Database("network")
+	channelsCollection := networkdata.Collection("channels")
+	options := new(options.FindOptions)
+
+	options.SetSkip(int64(n))
+	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cursor.Close(ctx)
+	cursor.TryNext(ctx)
+	var result bson.M
+	if err := cursor.Decode(&result); err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println(result["showrgb"])
+	transmission := result["showrgb"]
+	if pa, ok := transmission.(primitive.A); ok {
+		transmissionMSI := []interface{}(pa)
+		fmt.Println("Working", transmissionMSI)
+		return transmissionMSI
+	}
+	return nil
+}
+
+func iterateChangeStream(client *mongo.Client, routineCtx context.Context, waitGroup sync.WaitGroup, stream *mongo.ChangeStream, trn *[3]int) {
 	defer stream.Close(routineCtx)
 	defer waitGroup.Done()
 	for stream.Next(routineCtx) {
@@ -88,11 +124,18 @@ func iterateChangeStream(routineCtx context.Context, waitGroup sync.WaitGroup, s
 			panic(err)
 		}
 		fmt.Printf("Channel: %v\n", dbe.FullDocument.Channel)
+		fmt.Printf("TRANSMITTING: %v\n", transmissionOfChannel(client, dbe.FullDocument.Channel))
+
+		(*trn)[0] = 40
+		(*trn)[1] = 40
+		(*trn)[2] = 40
 
 	}
 }
 
 func main() {
+	transmission := [3]int{78, 89, 45} // this is the data (generator) for a channel transmission
+
 	log.Print("Database setting up ...")
 	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
 	if err != nil {
@@ -121,7 +164,7 @@ func main() {
 	}
 	waitGroup.Add(1)
 	routineCtx, _ := context.WithCancel(context.Background())
-	go iterateChangeStream(routineCtx, waitGroup, episodesStream)
+	go iterateChangeStream(client, routineCtx, waitGroup, episodesStream, &transmission)
 
 	log.Printf("ANTENNA setting up...")
 	http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -132,13 +175,13 @@ func main() {
 		}
 		log.Print("ws upgraded (AKA new tv box connected)")
 
-		// always on transmission on this channel
+		// always on transmission(s) on this channel
 		go func() {
 			defer conn.Close()
 			n := 135.0
 			incr := -0.5
 			for {
-				err = wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n, 80, 20, 600)) // TODO: to be wired to the database
+				err = wsutil.WriteServerMessage(conn, ws.OpBinary, image_stream(n, transmission)) // wired to the database
 				if err != nil {
 					log.Print("tv shut down, stop this feed ", err)
 					break

@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -85,37 +84,6 @@ func changeTo(client *mongo.Client, n int) error {
 	return err
 }
 
-// this one gets the the nth channel transmission data (3 values)
-func transmissionOfChannel(client *mongo.Client, n int) []interface{} {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client.Connect(ctx)
-	networkdata := client.Database("network")
-	channelsCollection := networkdata.Collection("channels")
-	options := new(options.FindOptions)
-
-	options.SetSkip(int64(n))
-	cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer cursor.Close(ctx)
-	cursor.TryNext(ctx)
-	var result bson.M
-	if err := cursor.Decode(&result); err != nil {
-		log.Fatal(err)
-	}
-	// fmt.Println(result["showrgb"])
-	transmission := result["showrgb"]
-	if pa, ok := transmission.(primitive.A); ok {
-		transmissionMSI := []interface{}(pa)
-		fmt.Println("Working", transmissionMSI)
-		return transmissionMSI
-		// fmt.Println(reflect.TypeOf(transmissionMSI))
-		// TODO: add new channel record
-	}
-	return nil
-}
-
 // this moves the channel and checking that it is always 0 <= n <= lastCh
 func moveToChannel(lastCh int, n *int) {
 	if *n >= lastCh {
@@ -166,7 +134,7 @@ func main() {
 	}
 	log.Printf("last channel is %v", totCh)
 
-	i++
+	i = 19
 	moveToChannel(totCh, &i)
 	i++
 	moveToChannel(totCh, &i)
@@ -180,7 +148,7 @@ func main() {
 	moveToChannel(totCh, &i)
 	log.Print("we are in channel ", i)
 
-	changeTo(client, i)
+	changeTo(client, 78)
 	// SAMPLE CODE TO SHOW ALL CHANNELS
 	// channelsCollection := networkdata.Collection("channels")
 	// cursor, err := channelsCollection.Find(ctx, bson.M{})
