@@ -1,6 +1,8 @@
 # Specify a base image
 FROM node:latest as build-deps
 
+EXPOSE 80
+
 # Create working directory and copy the app before running yarn install as the artifactory
 # credentials can be inside .npmrc
 WORKDIR /usr/src/app
