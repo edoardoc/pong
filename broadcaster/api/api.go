@@ -86,9 +86,9 @@ func changeTo(client *mongo.Client, n int) error {
 
 // this moves the channel and checking that it is always 0 <= n <= lastCh
 func moveToChannel(lastCh int, n *int) {
-	if *n >= lastCh {
+	if *n > lastCh {
 		*n = 0
-	} else if *n <= 0 {
+	} else if *n < 0 {
 		*n = lastCh - 1
 	}
 }
@@ -107,8 +107,36 @@ func lastChannel(client *mongo.Client) (error, int) {
 	return err, int(totChs - 1)
 }
 
+// TODO: refactor this
+// curl -v --request GET http://localhost:8080/channel/next
+func next(w http.ResponseWriter, r *http.Request, n *int, totCh int, client *mongo.Client) {
+	switch r.Method {
+	case http.MethodGet:
+		log.Printf("serving Get /next ")
+		*n++
+		moveToChannel(totCh, n)
+		changeTo(client, *n)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// TODO: refactor this
+// curl -v --request GET http://localhost:8080/channel/previous
+func previous(w http.ResponseWriter, r *http.Request, n *int, totCh int, client *mongo.Client) {
+	switch r.Method {
+	case http.MethodGet:
+		log.Printf("serving Get /previous ")
+		*n--
+		moveToChannel(totCh, n)
+		changeTo(client, *n)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func main() {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS&directConnection=true"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS&directConnection=true"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -126,86 +154,20 @@ func main() {
 	}
 
 	log.Printf("starting channels api ")
-	var i int
-	i = 1
+	currentChannel := 1
 	err, totCh := lastChannel(client)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("last channel is %v", totCh)
 
-	i = 19
-	moveToChannel(totCh, &i)
-	i++
-	moveToChannel(totCh, &i)
-	i++
-	moveToChannel(totCh, &i)
-	i++
-	moveToChannel(totCh, &i)
-	i++
-	moveToChannel(totCh, &i)
-	i++
-	moveToChannel(totCh, &i)
-	log.Print("we are in channel ", i)
-
-	changeTo(client, 78)
-	// SAMPLE CODE TO SHOW ALL CHANNELS
-	// channelsCollection := networkdata.Collection("channels")
-	// cursor, err := channelsCollection.Find(ctx, bson.M{})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// var channels []bson.M
-	// if err = cursor.All(ctx, &channels); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(channels)
-
-	// SAMPLE CODE TO SHOW CHANNEL with ID:...
-	// objectId, err := primitive.ObjectIDFromHex("634bfe67eb5543ddd0dcc82b")
-	// if err != nil {
-	// 	log.Println("Invalid id")
-	// }
-	// channelsCollection := networkdata.Collection("channels")
-	// cursorChannels := channelsCollection.FindOne(ctx, bson.M{"_id": objectId})
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// var channel bson.M
-	// if err = cursorChannels.Decode(&channel); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(channel)
-
-	// SAMPLE CODE TO SHOW CHANNEL Nth
-	// channelsCollection := networkdata.Collection("channels")
-	// options := new(options.FindOptions)
-	// options.SetSkip(15)
-	// cursor, err := channelsCollection.Find(ctx, bson.M{}, options)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer cursor.Close(ctx)
-	// cursor.TryNext(ctx)
-	// var result bson.M
-	// if err := cursor.Decode(&result); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(result["showrgb"])
-	// transmission := result["showrgb"]
-	// if pa, ok := transmission.(primitive.A); ok {
-	// 	transmissionMSI := []interface{}(pa)
-	// 	fmt.Println("Working", transmissionMSI)
-	// 	fmt.Println(reflect.TypeOf(transmissionMSI))
-	// }
-
-	// transmission := []interface{}(result["showrgb"])
-	// fmt.Printf("%T", transmission)
-
-	// fmt.Println("CHANNEL 1:", cursorChannels)
-
-	// http.HandleFunc("/api/signup", Signup)
-	// http.HandleFunc("/api/login", Login)
-	// http.HandleFunc("/api/users", Users)
-	http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/channel/next",
+		func(w http.ResponseWriter, r *http.Request) {
+			next(w, r, &currentChannel, totCh, client)
+		})
+	http.HandleFunc("/channel/previous",
+		func(w http.ResponseWriter, r *http.Request) {
+			previous(w, r, &currentChannel, totCh, client)
+		})
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

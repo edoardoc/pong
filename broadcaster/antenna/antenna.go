@@ -137,7 +137,7 @@ func main() {
 	transmission := [3]int{78, 89, 45} // this is the data (generator) for a channel transmission
 
 	log.Print("Database setting up ...")
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017/?authSource=admin&replicaSet=jamRS"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS"))
 	if err != nil {
 		log.Fatal(err)
 	}
