@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import tvimage from './snow.gif';
 
-var client = new WebSocket('ws://127.0.0.1:8080');
+var client = new WebSocket('ws://46.101.142.193:8080');
 client.binaryType = 'arraybuffer';
 
 class App extends Component {

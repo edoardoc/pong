@@ -28,7 +28,7 @@ services:
       - 27018:27018
     volumes:
       - ./mngreplica.key:/data/replica.key # openssl rand -base64 756 > mngreplica.key && chmod 400 mngreplica.key
-      - ./mongo-init2.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./mongo-init2.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # TDOD: the second time, mongo should be healty
       - ./mngdata:/data/db
     command: [mongod, --replSet, 'jamRS', --noauth, --maxConns, "10000"]
     healthcheck:

@@ -124,20 +124,19 @@ func iterateChangeStream(client *mongo.Client, routineCtx context.Context, waitG
 			panic(err)
 		}
 		fmt.Printf("Channel: %v\n", dbe.FullDocument.Channel)
-		fmt.Printf("TRANSMITTING: %v\n", transmissionOfChannel(client, dbe.FullDocument.Channel))
-
-		(*trn)[0] = 40
-		(*trn)[1] = 40
-		(*trn)[2] = 40
-
+		newones := transmissionOfChannel(client, dbe.FullDocument.Channel)
+		(*trn)[0] = int(newones[0].(int32))
+		(*trn)[1] = int(newones[1].(int32))
+		(*trn)[2] = int(newones[2].(int32))
+		fmt.Printf("TRANSMITTING ACTUAL: %v\n", *trn)
 	}
 }
 
 func main() {
-	transmission := [3]int{78, 89, 45} // this is the data (generator) for a channel transmission
+	transmission := [3]int{78, 89, 45} // this is the data (generator) for a channel transmission, starting up with any transmission
 
 	log.Print("Database setting up ...")
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://mongostorage:27017/?authSource=admin&replicaSet=jamRS&directConnection=true"))
 	if err != nil {
 		log.Fatal(err)
 	}

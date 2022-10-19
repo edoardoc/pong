@@ -1,24 +1,11 @@
-# Specify a base image
-FROM node:latest as build-deps
+FROM node:16.10 as build 
 
-EXPOSE 80
 
-# Create working directory and copy the app before running yarn install as the artifactory
-# credentials can be inside .npmrc
-WORKDIR /usr/src/app
-COPY . ./
-
-# Run yarn install
+WORKDIR /react-app
+COPY package*.json .
 RUN yarn install
-
-# Build the project
-CMD ["yarn", "run", "build"]
-
-# Install serve command for yarn package manager
-RUN yarn global add serve
-
-# Navigate to build folder
-WORKDIR /usr/src/app/build
-
-# Start the application
-CMD serve -p 80 -s . 
+COPY . .
+RUN yarn run build
+FROM nginx:1.19
+COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /react-app/build /usr/share/nginx/html
