@@ -11,7 +11,7 @@ Creating broadcaster_api_run ... done
 selectedChannelResult:  &{ObjectID("634e678db7aa91c6715224b3")}   
 ```	
 # from broadcaster folder                                         
-## START API                                                       
+## START MONGO                                                       
 ```
 docker-compose up -d mongostorage
 ```
