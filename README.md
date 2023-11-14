@@ -36,7 +36,8 @@ docker-compose up -d antenna
 docker build tv -t tv
 docker run --name tv -t -d -p 80:80 tv
 ```
-http://46.101.142.193/
+This will show the transmission
+http://ip.address/
 
 advance one channel
 curl http://ip.address:8090/channel/next
