@@ -5,14 +5,16 @@ a video transmission framework with websockets:
 - the channel information is constantly watched by the broadcaster, so that anytime I want to change channel I just need to write something else in a tabl.. er collection
 
 
-# first time run only, db creation                                
+# database creation                                
 ``` 
 > docker-compose run api app createDb                               
 																	
 Creating broadcaster_api_run ... done                             
 2022/10/18 08:45:01 creating database...                          
 2022/10/18 08:45:01 db is alive                                   
-selectedChannelResult:  &{ObjectID("634e678db7aa91c6715224b3")}   
+selectedChannelResult:  &{ObjectID("634e678db7aa91c6715224b3")}
+
+
 ```	
 # from the broadcaster folder                                         
 ## START MONGO                                                       
